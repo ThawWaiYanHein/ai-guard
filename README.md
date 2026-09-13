@@ -97,13 +97,13 @@ Look for:
 For a published release, users should install with one command:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB_ORG/ai-guard/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/ThawWaiYanHein/ai-guard/main/scripts/install.sh | sh
 ```
 
 On Windows PowerShell:
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/YOUR_GITHUB_ORG/ai-guard/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/ThawWaiYanHein/ai-guard/main/scripts/install.ps1 | iex
 ```
 
 The installer checks for cert-manager, installs it if needed, installs AI-Guard with Helm, and waits for rollout.
@@ -117,8 +117,8 @@ IMAGE_REPOSITORY=ai-guard IMAGE_TAG=0.1.0 ./scripts/install.sh
 After publishing an image, users can pin it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB_ORG/ai-guard/main/scripts/install.sh | \
-  IMAGE_REPOSITORY=ghcr.io/YOUR_GITHUB_ORG/ai-guard IMAGE_TAG=0.1.0 sh
+curl -fsSL https://raw.githubusercontent.com/ThawWaiYanHein/ai-guard/main/scripts/install.sh | \
+  IMAGE_REPOSITORY=ghcr.io/thawwaiyanhein/ai-guard IMAGE_TAG=0.1.0 sh
 ```
 
 For local chart development:
@@ -299,3 +299,4 @@ Protect LLM calls automatically.
 ## License
 
 MIT
+
