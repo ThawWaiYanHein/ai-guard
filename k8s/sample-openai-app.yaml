@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-api-key
+type: Opaque
+stringData:
+  OPENAI_API_KEY: replace-me
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-guard-openai-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-guard-openai-sample
+  template:
+    metadata:
+      labels:
+        app: ai-guard-openai-sample
+      annotations:
+        ai-guard.io/enabled: "true"
+    spec:
+      containers:
+        - name: app
+          image: python:3.11-slim
+          command: ["sh", "-c"]
+          args:
+            - |
+              pip install --no-cache-dir openai &&
+              python - <<'PY'
+              from openai import OpenAI
+              client = OpenAI()
+              client.responses.create(
+                  model="gpt-4.1-mini",
+                  input="My email is person@example.com"
+              )
+              PY
+          envFrom:
+            - secretRef:
+                name: openai-api-key

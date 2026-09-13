@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-guard-example-app
+  labels:
+    app: ai-guard-example-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-guard-example-app
+  template:
+    metadata:
+      labels:
+        app: ai-guard-example-app
+      annotations:
+        ai-guard.io/enabled: "true"
+    spec:
+      containers:
+        - name: app
+          image: python:3.11-slim
+          command: ["python", "-c"]
+          args:
+            - |
+              import os
+              print("AI_GUARD_ENABLED=", os.getenv("AI_GUARD_ENABLED"))
+              print("PYTHONPATH=", os.getenv("PYTHONPATH"))
+              import sitecustomize
+              print("sitecustomize loaded")
+              import time
+              time.sleep(3600)

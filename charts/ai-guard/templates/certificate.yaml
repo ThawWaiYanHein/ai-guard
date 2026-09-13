@@ -1,0 +1,33 @@
+{{- if .Values.tls.certManager.enabled }}
+{{- if .Values.tls.certManager.issuer.create }}
+apiVersion: cert-manager.io/v1
+kind: {{ .Values.tls.certManager.issuer.kind }}
+metadata:
+  name: {{ .Values.tls.certManager.issuer.name }}
+  namespace: {{ include "ai-guard.namespace" . }}
+  labels:
+    {{- include "ai-guard.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+{{- end }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.tls.certManager.certificate.name }}
+  namespace: {{ include "ai-guard.namespace" . }}
+  labels:
+    {{- include "ai-guard.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Values.tls.secretName }}
+  duration: {{ .Values.tls.certManager.certificate.duration }}
+  renewBefore: {{ .Values.tls.certManager.certificate.renewBefore }}
+  dnsNames:
+    - {{ include "ai-guard.fullname" . }}-webhook
+    - {{ include "ai-guard.fullname" . }}-webhook.{{ include "ai-guard.namespace" . }}
+    - {{ include "ai-guard.fullname" . }}-webhook.{{ include "ai-guard.namespace" . }}.svc
+    - {{ include "ai-guard.fullname" . }}-webhook.{{ include "ai-guard.namespace" . }}.svc.cluster.local
+  issuerRef:
+    name: {{ .Values.tls.certManager.issuer.name }}
+    kind: {{ .Values.tls.certManager.issuer.kind }}
+{{- end }}

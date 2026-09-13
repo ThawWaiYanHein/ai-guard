@@ -1,0 +1,17 @@
+AI-Guard has been installed.
+
+{{- if .Values.tls.certManager.enabled }}
+This release expects cert-manager and cainjector to be installed. The webhook CA bundle will be injected from the {{ .Values.tls.certManager.certificate.name }} Certificate.
+{{- else }}
+This release is using manually supplied TLS values.
+{{- end }}
+
+Check rollout:
+  kubectl rollout status deployment/{{ include "ai-guard.fullname" . }} -n {{ include "ai-guard.namespace" . }}
+
+Enable an application:
+  spec:
+    template:
+      metadata:
+        annotations:
+          ai-guard.io/enabled: "true"

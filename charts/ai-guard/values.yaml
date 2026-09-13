@@ -1,0 +1,58 @@
+replicaCount: 2
+
+image:
+  repository: ai-guard
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+namespace:
+  create: true
+  name: ai-guard-system
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: false
+
+webhook:
+  failurePolicy: Fail
+  timeoutSeconds: 10
+  namespaceSelector:
+    exclude:
+      - ai-guard-system
+      - kube-system
+      - kube-public
+      - kube-node-lease
+
+tls:
+  certManager:
+    enabled: true
+    issuer:
+      create: true
+      name: ai-guard-selfsigned
+      kind: Issuer
+    certificate:
+      name: ai-guard-webhook
+      duration: 8760h
+      renewBefore: 720h
+  crt: ""
+  key: ""
+  caBundle: ""
+  secretName: ai-guard-webhook-tls
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

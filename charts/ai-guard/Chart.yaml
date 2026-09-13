@@ -1,0 +1,14 @@
+apiVersion: v2
+name: ai-guard
+description: Kubernetes-native zero-code LLM security auto-instrumentation.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - llm
+  - security
+  - kubernetes
+  - auto-instrumentation
+  - openai
+maintainers:
+  - name: AI-Guard maintainers
