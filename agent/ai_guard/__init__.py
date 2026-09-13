@@ -1,4 +1,6 @@
 from .config import Config
+from .anthropic_adapter import patch_anthropic
+from .gemini_adapter import patch_gemini
 from .observability import log_event
 from .openai_adapter import patch_openai
 
@@ -12,5 +14,7 @@ def init() -> None:
 
     config = Config.from_env()
     patch_openai(config)
+    patch_gemini(config)
+    patch_anthropic(config)
     _started = True
-    log_event(config, action="enabled", reason="openai instrumentation installed")
+    log_event(config, action="enabled", reason="provider instrumentation installed")

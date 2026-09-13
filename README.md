@@ -16,7 +16,7 @@ No application code changes. No app image rebuild. No sidecar.
 
 ## Why This Exists
 
-Most LLM guardrail libraries require developers to edit application code. AI-Guard takes a different path: it uses a Kubernetes mutating admission webhook to inject a Python agent into annotated Pods, then `sitecustomize.py` patches OpenAI SDK calls at runtime.
+Most LLM guardrail libraries require developers to edit application code. AI-Guard takes a different path: it uses a Kubernetes mutating admission webhook to inject a Python agent into annotated Pods, then `sitecustomize.py` patches provider SDK calls at runtime.
 
 This project is not trying to beat every guardrail framework at detection quality. The goal is to make LLM security easy to roll out across Kubernetes workloads.
 
@@ -24,11 +24,13 @@ This project is not trying to beat every guardrail framework at detection qualit
 
 - Injects an init container, shared volume, volume mount, and environment variables into annotated Pods.
 - Loads a Python agent automatically with `sitecustomize.py`.
-- Intercepts OpenAI Python SDK calls:
+- Intercepts provider SDK calls:
   - `client.chat.completions.create()`
   - `await client.chat.completions.create()`
   - `client.responses.create()`
   - `await client.responses.create()`
+  - `client.models.generate_content()` for Gemini-style SDK usage
+  - `client.messages.create()` for Anthropic-style SDK usage
 - Redacts common PII and secrets before requests leave the workload.
 - Observes prompt-injection patterns.
 - Supports an exact in-memory development cache.
@@ -51,10 +53,10 @@ Pod with ai-guard-init + emptyDir + env + PYTHONPATH
 Python startup imports /opt/ai-guard/sitecustomize.py
   |
   v
-AI-Guard patches OpenAI SDK create() methods
+AI-Guard patches provider SDK methods
   |
   v
-PII -> secrets -> prompt-injection observe -> redaction -> exact cache -> OpenAI
+PII -> secrets -> prompt-injection observe -> redaction -> exact cache -> provider SDK
 ```
 
 ## Quickstart With Kind
@@ -226,6 +228,18 @@ Application containers can override these variables:
 
 The default policy is intentionally conservative for an MVP: redact obvious sensitive data, log what happened, and avoid pretending regex detection is complete DLP.
 
+## Provider Support
+
+AI-Guard currently patches these Python SDK paths on a best-effort basis:
+
+| Provider | Supported calls |
+| --- | --- |
+| OpenAI | `client.responses.create()`, `client.chat.completions.create()` |
+| Gemini | `client.models.generate_content()` |
+| Anthropic | `client.messages.create()` |
+
+Sync and async resource classes are patched when the installed provider SDK exposes them. If an SDK changes internal resource class names, AI-Guard may need an adapter update.
+
 ## Cache Behavior
 
 AI-Guard uses a SHA-256 exact cache key over response-shaping request fields such as model, messages/input, instructions, temperature, token limits, tools, response format, reasoning, `top_p`, seed, and stop sequences.
@@ -280,7 +294,7 @@ Production hardening roadmap:
 - Prometheus ServiceMonitor
 - Redis cache backend or cache-off production profile
 - output scanning
-- Anthropic, Bedrock, LiteLLM, and LangChain adapters
+- Bedrock, LiteLLM, LangChain, and LlamaIndex adapters
 - e2e Kind tests in CI
 
 ## How This Differs From Guardrail Libraries
