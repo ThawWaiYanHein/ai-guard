@@ -94,7 +94,7 @@ Look for:
 
 ## One-Command Install
 
-For a published release, users should install with one command:
+Install with one command:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ThawWaiYanHein/ai-guard/main/scripts/install.sh | sh
@@ -108,17 +108,16 @@ iwr -useb https://raw.githubusercontent.com/ThawWaiYanHein/ai-guard/main/scripts
 
 The installer checks for cert-manager, installs it if needed, installs AI-Guard with Helm, and waits for rollout.
 
-Until you publish a container image, local users can run:
+By default, the chart uses:
+
+```text
+ghcr.io/thawwaiyanhein/ai-guard:0.1.0
+```
+
+For local image development, override the image:
 
 ```sh
 IMAGE_REPOSITORY=ai-guard IMAGE_TAG=0.1.0 ./scripts/install.sh
-```
-
-After publishing an image, users can pin it:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/ThawWaiYanHein/ai-guard/main/scripts/install.sh | \
-  IMAGE_REPOSITORY=ghcr.io/thawwaiyanhein/ai-guard IMAGE_TAG=0.1.0 sh
 ```
 
 For local chart development:

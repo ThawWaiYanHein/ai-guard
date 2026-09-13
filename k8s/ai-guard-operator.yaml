@@ -47,14 +47,14 @@ spec:
           type: RuntimeDefault
       containers:
         - name: webhook
-          image: ai-guard:0.1.0
+          image: ghcr.io/thawwaiyanhein/ai-guard:0.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: https
               containerPort: 8443
           env:
             - name: AI_GUARD_IMAGE
-              value: ai-guard:0.1.0
+              value: ghcr.io/thawwaiyanhein/ai-guard:0.1.0
             - name: TLS_CERT_FILE
               value: /tls/tls.crt
             - name: TLS_KEY_FILE

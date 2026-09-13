@@ -23,7 +23,9 @@ helm install `
 
 helm upgrade --install ai-guard .\charts\ai-guard `
     --namespace ai-guard-system `
-    --create-namespace
+    --create-namespace `
+    --set image.repository=ai-guard `
+    --set image.tag=0.1.0
 
 kubectl rollout status deployment/ai-guard -n ai-guard-system
 kubectl apply -f .\k8s\example-app.yaml

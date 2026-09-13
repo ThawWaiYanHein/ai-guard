@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: ai-guard
+  repository: ghcr.io/thawwaiyanhein/ai-guard
   tag: "0.1.0"
   pullPolicy: IfNotPresent
 
