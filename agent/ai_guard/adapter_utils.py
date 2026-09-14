@@ -50,6 +50,42 @@ def patch_method(
     return True
 
 
+def patch_function(module: Any, function_name: str, api: str, config: Config, *, is_async: bool = False) -> bool:
+    current = getattr(module, function_name, None)
+    if current is None or getattr(current, "_ai_guard_patched", False):
+        return False
+
+    if is_async:
+
+        @wraps(current)
+        async def async_wrapper(*args, **kwargs):
+            guarded = prepare(api, kwargs, config)
+            cached = cache_get(api, guarded, config)
+            if cached is not None:
+                return cached
+            response = await current(*args, **guarded)
+            cache_set(api, guarded, response, config)
+            return response
+
+        async_wrapper._ai_guard_patched = True
+        setattr(module, function_name, async_wrapper)
+        return True
+
+    @wraps(current)
+    def wrapper(*args, **kwargs):
+        guarded = prepare(api, kwargs, config)
+        cached = cache_get(api, guarded, config)
+        if cached is not None:
+            return cached
+        response = current(*args, **guarded)
+        cache_set(api, guarded, response, config)
+        return response
+
+    wrapper._ai_guard_patched = True
+    setattr(module, function_name, wrapper)
+    return True
+
+
 def prepare(api: str, kwargs: dict[str, Any], config: Config) -> dict[str, Any]:
     result = inspect_payload(api, kwargs, config)
     return result.payload

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .config import Config
-from .observability import increment, log_event
+from .observability import increment, increment_finding, log_event
 from .security.injection import detect_prompt_injection
 from .security.pii import redact_pii
 from .security.policy import Action, Finding, Policy, default_policy
@@ -20,6 +20,7 @@ class GuardResult:
     action: str
     findings: list[Finding]
     redactions: int = 0
+    redaction_report: list[dict[str, Any]] | None = None
 
 
 def _walk_strings(value: Any, fn) -> tuple[Any, list[Finding], int]:
@@ -48,11 +49,25 @@ def _walk_strings(value: Any, fn) -> tuple[Any, list[Finding], int]:
     return value, [], 0
 
 
-def _redact_text(text: str) -> tuple[str, list[Finding], int]:
-    text, pii_findings, pii_count = redact_pii(text)
-    text, secret_findings, secret_count = redact_secrets(text)
-    injection_findings = detect_prompt_injection(text)
+def _scan_text(text: str, config: Config, policy: Policy) -> tuple[str, list[Finding], int]:
+    text, pii_findings, pii_count = redact_pii(text, config)
+    text, secret_findings, secret_count = redact_secrets(text, config)
+    injection_findings = detect_prompt_injection(
+        text,
+        high_action=policy.overrides.get("prompt_injection.high", Action.OBSERVE)
+        if policy.overrides
+        else Action.OBSERVE,
+    )
     return text, pii_findings + secret_findings + injection_findings, pii_count + secret_count
+
+
+def _redact_text(text: str, config: Config, policy: Policy) -> tuple[str, list[Finding], int]:
+    return _scan_text(text, config, policy)
+
+
+def _record_findings(findings: list[Finding]) -> None:
+    for finding in findings:
+        increment_finding(finding.kind)
 
 
 def inspect_payload(
@@ -62,14 +77,18 @@ def inspect_payload(
     policy: Policy | None = None,
 ) -> GuardResult:
     config = config or Config.from_env()
-    policy = policy or default_policy()
+    policy = policy or default_policy(config)
     increment("requests_inspected")
 
     sanitized = copy.deepcopy(payload)
-    sanitized, findings, redactions = _walk_strings(sanitized, _redact_text)
+    sanitized, findings, redactions = _walk_strings(
+        sanitized, lambda text: _redact_text(text, config, policy)
+    )
     increment("redactions_performed", redactions)
+    _record_findings(findings)
 
-    blocked = any(policy.action_for(finding) == Action.BLOCK for finding in findings)
+    report = [finding.report(policy.action_for(finding)) for finding in findings]
+    blocked = any(item["action"] == Action.BLOCK.value for item in report)
     model = payload.get("model")
     if blocked and config.mode == "enforce":
         increment("blocked_requests")
@@ -79,6 +98,7 @@ def inspect_payload(
             reason="policy blocked request",
             model=model,
             findings=[finding.kind for finding in findings],
+            reports=report,
         )
         raise AIGuardBlockedError("AI-Guard blocked request by policy")
 
@@ -91,5 +111,6 @@ def inspect_payload(
         reason=f"{api} request inspected",
         model=model,
         findings=[finding.kind for finding in findings],
+        reports=report,
     )
-    return GuardResult(sanitized, action, findings, redactions)
+    return GuardResult(sanitized, action, findings, redactions, report)

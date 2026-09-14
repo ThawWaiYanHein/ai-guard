@@ -5,6 +5,15 @@ Kubernetes-native zero-code LLM security auto-instrumentation.
 AI-Guard is for platform teams that want OpenTelemetry-style auto-instrumentation for LLM security. Install AI-Guard once in a Kubernetes cluster, then application teams opt in with one annotation:
 
 ```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-apps
+  labels:
+    ai-guard.io/injection: enabled
+```
+
+```yaml
 spec:
   template:
     metadata:
@@ -12,7 +21,7 @@ spec:
         ai-guard.io/enabled: "true"
 ```
 
-No application code changes. No app image rebuild. No sidecar.
+No application code changes. No app image rebuild. No sidecar. By default, AI-Guard only receives admission requests for namespaces labeled `ai-guard.io/injection=enabled`.
 
 ## Why This Exists
 
@@ -31,6 +40,7 @@ This project is not trying to beat every guardrail framework at detection qualit
   - `await client.responses.create()`
   - `client.models.generate_content()` for Gemini-style SDK usage
   - `client.messages.create()` for Anthropic-style SDK usage
+  - `litellm.completion()` and `litellm.acompletion()`
 - Redacts common PII and secrets before requests leave the workload.
 - Observes prompt-injection patterns.
 - Supports an exact in-memory development cache.
@@ -83,6 +93,7 @@ The demo builds the image, creates or reuses a Kind cluster, loads the image, in
 Verify injection:
 
 ```sh
+kubectl label namespace default ai-guard.io/injection=enabled
 kubectl get pod -l app=ai-guard-example-app -o yaml
 ```
 
@@ -176,6 +187,7 @@ helm upgrade --install ai-guard ./charts/ai-guard \
 Deploy the sample app:
 
 ```sh
+kubectl label namespace default ai-guard.io/injection=enabled
 kubectl apply -f k8s/example-app.yaml
 ```
 
@@ -216,17 +228,26 @@ Application containers can override these variables:
 | --- | --- | --- |
 | `AI_GUARD_ENABLED` | `true` | Enables `sitecustomize.py` instrumentation. |
 | `AI_GUARD_MODE` | `enforce` | Enforces blocking policies. |
-| `AI_GUARD_CACHE` | `true` | Enables development memory cache. |
+| `AI_GUARD_CACHE` | `false` | Enables development memory cache when set to `true`. |
 | `AI_GUARD_CACHE_TTL` | `600` | Cache TTL in seconds. |
 | `AI_GUARD_POLICY` | `default` | Reserved for future policy profile loading. |
+| `AI_GUARD_PII_TYPES` | `all` | Comma-separated PII types such as `email,phone,ssn`. |
+| `AI_GUARD_PHONE_COUNTRIES` | `US,MM,INTL` | Phone detector country profiles. |
+| `AI_GUARD_ALLOWLIST` | empty | Comma-separated exact values to skip. |
+| `AI_GUARD_IGNORE_PATTERNS` | empty | Comma-separated regex/literal patterns to skip. |
+| `AI_GUARD_ENTROPY_SECRETS` | `true` | Enables high-entropy unknown secret detection. |
+| `AI_GUARD_PROMPT_INJECTION_ACTION` | `OBSERVE` | Action for high-confidence prompt injection: `OBSERVE` or `BLOCK`. |
+| `AI_GUARD_PRESIDIO` | `false` | Enables optional Presidio analysis when Presidio is installed. |
 
 ## Default Policy
 
-- PII: redact email, phone, credit card, and IP address.
-- Secrets: redact OpenAI API keys, AWS keys, JWTs, bearer tokens, and private keys.
-- Prompt injection: observe only.
+- PII: redact email, phone, credit card, IP address, SSN, passport number, address, and conservative name patterns.
+- Secrets: redact OpenAI, AWS, GitHub, Slack, Google, Azure, Stripe, Twilio, SendGrid, Hugging Face, Discord, Notion, Datadog, Terraform Cloud, JWT, bearer token, private key, and high-entropy unknown secrets.
+- Prompt injection: observe low/medium patterns and observe or block high-confidence patterns depending on `AI_GUARD_PROMPT_INJECTION_ACTION`.
 
 The default policy is intentionally conservative for an MVP: redact obvious sensitive data, log what happened, and avoid pretending regex detection is complete DLP.
+
+AI-Guard emits structured redaction reports with finding type, severity, action, location, and a short fingerprint. It does not log raw secret or PII values by default.
 
 ## Provider Support
 
@@ -237,6 +258,7 @@ AI-Guard currently patches these Python SDK paths on a best-effort basis:
 | OpenAI | `client.responses.create()`, `client.chat.completions.create()` |
 | Gemini | `client.models.generate_content()` |
 | Anthropic | `client.messages.create()` |
+| LiteLLM | `litellm.completion()`, `litellm.acompletion()` |
 
 Sync and async resource classes are patched when the installed provider SDK exposes them. If an SDK changes internal resource class names, AI-Guard may need an adapter update.
 
@@ -251,7 +273,7 @@ AI-Guard does not cache:
 - conversation state
 - `previous_response_id`
 
-The current memory cache is for development only.
+The current memory cache is disabled by default and is for development only. Enable it explicitly with `AI_GUARD_CACHE=true`.
 
 ## Observability
 
@@ -292,9 +314,9 @@ Production hardening roadmap:
 - ConfigMap or CRD policy management
 - pinned image digests
 - Prometheus ServiceMonitor
-- Redis cache backend or cache-off production profile
-- output scanning
-- Bedrock, LiteLLM, LangChain, and LlamaIndex adapters
+- Redis cache backend with production-safe encryption/eviction controls
+- Bedrock, LangChain, and LlamaIndex adapters
+- optional output scanning with observe-first semantics
 - e2e Kind tests in CI
 
 ## How This Differs From Guardrail Libraries
