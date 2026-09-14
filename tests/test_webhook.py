@@ -30,6 +30,9 @@ def test_build_patches_handles_empty_pod_spec():
     assert "/spec/volumes" in paths
     assert "/spec/containers/0/env" in paths
     assert "/spec/containers/0/volumeMounts" in paths
+    env_patch = next(patch for patch in patches if patch["path"] == "/spec/containers/0/env")
+    names = {item["name"] for item in env_patch["value"]}
+    assert {"AI_GUARD_ENABLED", "AI_GUARD_PII", "AI_GUARD_CACHE", "PYTHONPATH", "POD_NAMESPACE", "APP_NAME"} <= names
 
 
 def test_build_patches_appends_to_existing_collections_and_preserves_pythonpath():
@@ -61,6 +64,52 @@ def test_build_patches_appends_to_existing_collections_and_preserves_pythonpath(
         for patch in patches
     )
     assert any(patch["path"] == "/spec/containers/0/volumeMounts/-" for patch in patches)
+
+
+def test_existing_ai_guard_pii_env_is_preserved():
+    webhook = load_webhook()
+    pod = {
+        "metadata": {"annotations": {"ai-guard.io/enabled": "true"}},
+        "spec": {
+            "containers": [
+                {
+                    "name": "app",
+                    "image": "app:v1",
+                    "env": [{"name": "AI_GUARD_PII", "value": "off"}],
+                }
+            ],
+        },
+    }
+
+    patches = webhook.build_patches(pod, "ai-guard:test")
+    assert not any(
+        patch.get("value", {}).get("name") == "AI_GUARD_PII"
+        for patch in patches
+        if patch["path"].startswith("/spec/containers/0/env/")
+    )
+
+
+def test_existing_ai_guard_cache_env_is_preserved():
+    webhook = load_webhook()
+    pod = {
+        "metadata": {"annotations": {"ai-guard.io/enabled": "true"}},
+        "spec": {
+            "containers": [
+                {
+                    "name": "app",
+                    "image": "app:v1",
+                    "env": [{"name": "AI_GUARD_CACHE", "value": "true"}],
+                }
+            ],
+        },
+    }
+
+    patches = webhook.build_patches(pod, "ai-guard:test")
+    assert not any(
+        patch.get("value", {}).get("name") == "AI_GUARD_CACHE"
+        for patch in patches
+        if patch["path"].startswith("/spec/containers/0/env/")
+    )
 
 
 def test_admission_response_encodes_json_patch():

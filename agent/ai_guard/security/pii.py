@@ -124,6 +124,8 @@ def _presidio_findings(text: str, config: Config) -> list[Finding]:
 
 def detect_pii(text: str, config: Config | None = None) -> list[Finding]:
     config = config or Config.from_env()
+    if not config.pii_enabled:
+        return []
     findings: list[Finding] = []
 
     _append_regex(findings, text, "pii.email", EMAIL, config)

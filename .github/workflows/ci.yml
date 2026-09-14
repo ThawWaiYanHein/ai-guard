@@ -28,6 +28,32 @@ jobs:
       - name: Build image
         run: docker build -t ai-guard:ci .
 
+  sdk-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install provider SDKs
+        run: python -m pip install --upgrade pip openai anthropic google-genai litellm
+      - name: Check adapter imports
+        run: |
+          PYTHONPATH=agent python - <<'PY'
+          from ai_guard.config import Config
+          from ai_guard.openai_adapter import patch_openai
+          from ai_guard.gemini_adapter import patch_gemini
+          from ai_guard.anthropic_adapter import patch_anthropic
+          from ai_guard.litellm_adapter import patch_litellm
+
+          config = Config(cache_enabled=False)
+          patch_openai(config)
+          patch_gemini(config)
+          patch_anthropic(config)
+          patch_litellm(config)
+          print("provider SDK compatibility check complete")
+          PY
+
   helm:
     runs-on: ubuntu-latest
     steps:

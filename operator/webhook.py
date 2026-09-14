@@ -15,6 +15,8 @@ except ModuleNotFoundError:
 
 ANNOTATION_ENABLED = "ai-guard.io/enabled"
 AI_GUARD_IMAGE = os.getenv("AI_GUARD_IMAGE", "ai-guard:0.1.0")
+AI_GUARD_DEFAULT_PII = os.getenv("AI_GUARD_DEFAULT_PII", "on")
+AI_GUARD_DEFAULT_CACHE = os.getenv("AI_GUARD_DEFAULT_CACHE", "false")
 AGENT_VOLUME_NAME = "ai-guard-volume"
 INIT_CONTAINER_NAME = "ai-guard-init"
 AGENT_MOUNT_PATH = "/opt/ai-guard"
@@ -84,6 +86,18 @@ def _env(name: str, value: str) -> dict[str, str]:
     return {"name": name, "value": value}
 
 
+def _field_ref_env(name: str, field_path: str) -> dict[str, Any]:
+    return {
+        "name": name,
+        "valueFrom": {
+            "fieldRef": {
+                "apiVersion": "v1",
+                "fieldPath": field_path,
+            }
+        },
+    }
+
+
 def _container_patch_path(container_index: int, field: str) -> str:
     return f"/spec/containers/{container_index}/{field}"
 
@@ -119,7 +133,13 @@ def _ensure_env(
     patches: list[dict[str, Any]],
 ) -> None:
     env = container.get("env")
-    desired = [_env("AI_GUARD_ENABLED", "true")]
+    desired = [
+        _env("AI_GUARD_ENABLED", "true"),
+        _env("AI_GUARD_PII", AI_GUARD_DEFAULT_PII),
+        _env("AI_GUARD_CACHE", AI_GUARD_DEFAULT_CACHE),
+        _field_ref_env("POD_NAMESPACE", "metadata.namespace"),
+        _field_ref_env("APP_NAME", "metadata.name"),
+    ]
 
     if env is None:
         desired.append(_env("PYTHONPATH", AGENT_MOUNT_PATH))
@@ -139,6 +159,42 @@ def _ensure_env(
                 "op": "add",
                 "path": f"{_container_patch_path(container_index, 'env')}/-",
                 "value": _env("AI_GUARD_ENABLED", "true"),
+            }
+        )
+
+    if "AI_GUARD_PII" not in names:
+        patches.append(
+            {
+                "op": "add",
+                "path": f"{_container_patch_path(container_index, 'env')}/-",
+                "value": _env("AI_GUARD_PII", AI_GUARD_DEFAULT_PII),
+            }
+        )
+
+    if "AI_GUARD_CACHE" not in names:
+        patches.append(
+            {
+                "op": "add",
+                "path": f"{_container_patch_path(container_index, 'env')}/-",
+                "value": _env("AI_GUARD_CACHE", AI_GUARD_DEFAULT_CACHE),
+            }
+        )
+
+    if "POD_NAMESPACE" not in names:
+        patches.append(
+            {
+                "op": "add",
+                "path": f"{_container_patch_path(container_index, 'env')}/-",
+                "value": _field_ref_env("POD_NAMESPACE", "metadata.namespace"),
+            }
+        )
+
+    if "APP_NAME" not in names:
+        patches.append(
+            {
+                "op": "add",
+                "path": f"{_container_patch_path(container_index, 'env')}/-",
+                "value": _field_ref_env("APP_NAME", "metadata.name"),
             }
         )
 

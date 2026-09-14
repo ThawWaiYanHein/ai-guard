@@ -40,6 +40,10 @@ spec:
               value: /tls/tls.crt
             - name: TLS_KEY_FILE
               value: /tls/tls.key
+            - name: AI_GUARD_DEFAULT_PII
+              value: {{ .Values.agent.pii | quote }}
+            - name: AI_GUARD_DEFAULT_CACHE
+              value: {{ .Values.agent.cache | quote }}
           livenessProbe:
             httpGet:
               scheme: HTTPS

@@ -19,10 +19,17 @@ serviceAccount:
 rbac:
   create: false
 
+agent:
+  pii: "on"
+  cache: "false"
+
 webhook:
   failurePolicy: Fail
   timeoutSeconds: 10
   namespaceSelector:
+    mode: opt-in
+    labelKey: ai-guard.io/injection
+    labelValue: enabled
     exclude:
       - ai-guard-system
       - kube-system

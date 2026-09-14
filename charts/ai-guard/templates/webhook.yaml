@@ -30,6 +30,12 @@ webhooks:
         resources: ["pods"]
     namespaceSelector:
       matchExpressions:
+        {{- if eq .Values.webhook.namespaceSelector.mode "opt-in" }}
+        - key: {{ .Values.webhook.namespaceSelector.labelKey | quote }}
+          operator: In
+          values:
+            - {{ .Values.webhook.namespaceSelector.labelValue | quote }}
+        {{- end }}
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:

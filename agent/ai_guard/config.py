@@ -16,6 +16,13 @@ def _csv_env(name: str, default: tuple[str, ...] = ()) -> tuple[str, ...]:
     return tuple(item.strip() for item in value.split(",") if item.strip())
 
 
+def _on_off_env(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on", "enabled", "enable"}
+
+
 @dataclass(frozen=True)
 class Config:
     enabled: bool = True
@@ -25,6 +32,7 @@ class Config:
     policy_name: str = "default"
     namespace: str = "unknown"
     application: str = "unknown"
+    pii_enabled: bool = True
     pii_types: tuple[str, ...] = ("all",)
     pii_phone_countries: tuple[str, ...] = ("US", "MM", "INTL")
     allowlist: tuple[str, ...] = ()
@@ -43,6 +51,7 @@ class Config:
             policy_name=os.getenv("AI_GUARD_POLICY", "default"),
             namespace=os.getenv("POD_NAMESPACE", os.getenv("KUBERNETES_NAMESPACE", "unknown")),
             application=os.getenv("APP_NAME", os.getenv("HOSTNAME", "unknown")),
+            pii_enabled=_on_off_env("AI_GUARD_PII", True),
             pii_types=_csv_env("AI_GUARD_PII_TYPES", ("all",)),
             pii_phone_countries=_csv_env("AI_GUARD_PHONE_COUNTRIES", ("US", "MM", "INTL")),
             allowlist=_csv_env("AI_GUARD_ALLOWLIST"),

@@ -26,6 +26,7 @@ helm upgrade --install ai-guard ./charts/ai-guard \
   --set image.tag=0.1.0
 
 kubectl rollout status deployment/ai-guard -n ai-guard-system
+kubectl label namespace default ai-guard.io/injection=enabled --overwrite
 kubectl apply -f k8s/example-app.yaml
 kubectl rollout status deployment/ai-guard-example-app
 

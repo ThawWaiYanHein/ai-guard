@@ -231,6 +231,7 @@ Application containers can override these variables:
 | `AI_GUARD_CACHE` | `false` | Enables development memory cache when set to `true`. |
 | `AI_GUARD_CACHE_TTL` | `600` | Cache TTL in seconds. |
 | `AI_GUARD_POLICY` | `default` | Reserved for future policy profile loading. |
+| `AI_GUARD_PII` | `on` | Enables PII detection/redaction. Set to `off` to skip PII handling. |
 | `AI_GUARD_PII_TYPES` | `all` | Comma-separated PII types such as `email,phone,ssn`. |
 | `AI_GUARD_PHONE_COUNTRIES` | `US,MM,INTL` | Phone detector country profiles. |
 | `AI_GUARD_ALLOWLIST` | empty | Comma-separated exact values to skip. |
@@ -238,6 +239,28 @@ Application containers can override these variables:
 | `AI_GUARD_ENTROPY_SECRETS` | `true` | Enables high-entropy unknown secret detection. |
 | `AI_GUARD_PROMPT_INJECTION_ACTION` | `OBSERVE` | Action for high-confidence prompt injection: `OBSERVE` or `BLOCK`. |
 | `AI_GUARD_PRESIDIO` | `false` | Enables optional Presidio analysis when Presidio is installed. |
+
+Cluster-wide defaults can be set through Helm. For example, disable PII redaction for newly created instrumented Pods:
+
+```sh
+helm upgrade ai-guard ./charts/ai-guard \
+  -n ai-guard-system \
+  --reuse-values \
+  --set agent.pii=off
+```
+
+Applications can still override the injected default by setting `AI_GUARD_PII` themselves.
+
+Enable the optional development cache cluster-wide:
+
+```sh
+helm upgrade ai-guard ./charts/ai-guard \
+  -n ai-guard-system \
+  --reuse-values \
+  --set agent.cache=true
+```
+
+Applications can still override the injected default by setting `AI_GUARD_CACHE` themselves.
 
 ## Default Policy
 

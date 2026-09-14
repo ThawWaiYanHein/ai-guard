@@ -89,3 +89,39 @@ class AsyncMessages:
     content = result["messages"][0]["content"]
     assert "[REDACTED_EMAIL]" in content
     assert "[REDACTED_OPENAI_KEY]" in content
+
+
+def test_litellm_adapter_redacts_completion(tmp_path, monkeypatch):
+    _write_package(
+        tmp_path,
+        {
+            "litellm.py": """
+def completion(**kwargs):
+    return kwargs
+
+async def acompletion(**kwargs):
+    return kwargs
+""",
+        },
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    _clear_modules("litellm", "ai_guard.litellm_adapter")
+
+    adapter = importlib.import_module("ai_guard.litellm_adapter")
+    adapter._PATCHED = False
+    adapter.patch_litellm(Config(cache_enabled=False))
+
+    import litellm
+
+    result = litellm.completion(
+        model="openai/fake",
+        messages=[
+            {
+                "role": "user",
+                "content": "email person@example.com and token sk-proj-abcdefghijklmnopqrstuvwxyz",
+            }
+        ],
+    )
+    content = result["messages"][0]["content"]
+    assert "[REDACTED_EMAIL]" in content
+    assert "[REDACTED_OPENAI_KEY]" in content

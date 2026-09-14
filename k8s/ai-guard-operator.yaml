@@ -59,6 +59,10 @@ spec:
               value: /tls/tls.crt
             - name: TLS_KEY_FILE
               value: /tls/tls.key
+            - name: AI_GUARD_DEFAULT_PII
+              value: "on"
+            - name: AI_GUARD_DEFAULT_CACHE
+              value: "false"
           livenessProbe:
             httpGet:
               scheme: HTTPS
@@ -131,6 +135,10 @@ webhooks:
         resources: ["pods"]
     namespaceSelector:
       matchExpressions:
+        - key: ai-guard.io/injection
+          operator: In
+          values:
+            - enabled
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
