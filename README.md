@@ -179,7 +179,8 @@ helm install \
 Install AI-Guard:
 
 ```sh
-helm upgrade --install ai-guard ./charts/ai-guard \
+helm upgrade --install ai-guard oci://ghcr.io/thawwaiyanhein/charts/ai-guard \
+  --version 0.1.0 \
   --namespace ai-guard-system \
   --create-namespace
 ```
