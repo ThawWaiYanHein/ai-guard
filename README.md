@@ -2,7 +2,7 @@
 
 Kubernetes-native zero-code LLM security auto-instrumentation.
 
-AI-Guard is for platform teams that want OpenTelemetry-style auto-instrumentation for LLM security. Install AI-Guard once in a Kubernetes cluster, then application teams opt in with one annotation:
+AI-Guard is for platform teams that want OpenTelemetry-style auto-instrumentation for LLM security. Install AI-Guard once in a Kubernetes cluster, then application teams opt in with a namespace label and one Pod template annotation:
 
 ```yaml
 apiVersion: v1
@@ -43,7 +43,7 @@ This project is not trying to beat every guardrail framework at detection qualit
   - `litellm.completion()` and `litellm.acompletion()`
 - Redacts common PII and secrets before requests leave the workload.
 - Observes prompt-injection patterns.
-- Supports an exact in-memory development cache.
+- Supports an optional exact in-memory development cache, disabled by default.
 - Emits JSON audit logs and Prometheus-style webhook metrics.
 
 ## Architecture
@@ -66,7 +66,7 @@ Python startup imports /opt/ai-guard/sitecustomize.py
 AI-Guard patches provider SDK methods
   |
   v
-PII -> secrets -> prompt-injection observe -> redaction -> exact cache -> provider SDK
+PII -> secrets -> prompt-injection observe/block -> redaction -> optional exact cache -> provider SDK
 ```
 
 ## Quickstart With Kind
@@ -136,18 +136,19 @@ IMAGE_REPOSITORY=ai-guard IMAGE_TAG=0.1.0 ./scripts/install.sh
 For local chart development:
 
 ```sh
-./scripts/install.sh
+CHART=./charts/ai-guard ./scripts/install.sh
 ```
 
 On Windows:
 
 ```powershell
+$env:CHART=".\charts\ai-guard"
 .\scripts\install.ps1
 ```
 
 ## Manual Install
 
-Build the image:
+For local cluster development only, build the image:
 
 ```sh
 docker build -t ai-guard:0.1.0 .
@@ -244,7 +245,8 @@ Application containers can override these variables:
 Cluster-wide defaults can be set through Helm. For example, disable PII redaction for newly created instrumented Pods:
 
 ```sh
-helm upgrade ai-guard ./charts/ai-guard \
+helm upgrade ai-guard oci://ghcr.io/thawwaiyanhein/charts/ai-guard \
+  --version 0.1.0 \
   -n ai-guard-system \
   --reuse-values \
   --set agent.pii=off
@@ -255,7 +257,8 @@ Applications can still override the injected default by setting `AI_GUARD_PII` t
 Enable the optional development cache cluster-wide:
 
 ```sh
-helm upgrade ai-guard ./charts/ai-guard \
+helm upgrade ai-guard oci://ghcr.io/thawwaiyanhein/charts/ai-guard \
+  --version 0.1.0 \
   -n ai-guard-system \
   --reuse-values \
   --set agent.cache=true
@@ -334,7 +337,6 @@ AI-Guard is an early open-source MVP. It is useful for demos, experimentation, a
 
 Production hardening roadmap:
 
-- published container images and hosted Helm repository
 - ConfigMap or CRD policy management
 - pinned image digests
 - Prometheus ServiceMonitor

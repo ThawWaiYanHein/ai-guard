@@ -3,7 +3,8 @@ set -eu
 
 RELEASE_NAME="${RELEASE_NAME:-ai-guard}"
 NAMESPACE="${NAMESPACE:-ai-guard-system}"
-CHART="${CHART:-./charts/ai-guard}"
+CHART="${CHART:-oci://ghcr.io/thawwaiyanhein/charts/ai-guard}"
+CHART_VERSION="${CHART_VERSION:-0.1.0}"
 IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-ghcr.io/thawwaiyanhein/ai-guard}"
 IMAGE_TAG="${IMAGE_TAG:-0.1.0}"
 CERT_MANAGER_VERSION="${CERT_MANAGER_VERSION:-v1.20.3}"
@@ -36,12 +37,25 @@ else
 fi
 
 echo "Installing AI-Guard..."
-helm upgrade --install "$RELEASE_NAME" "$CHART" \
-  --namespace "$NAMESPACE" \
-  --create-namespace \
-  --set image.repository="$IMAGE_REPOSITORY" \
-  --set image.tag="$IMAGE_TAG" \
-  --wait
+case "$CHART" in
+  oci://*)
+    helm upgrade --install "$RELEASE_NAME" "$CHART" \
+      --version "$CHART_VERSION" \
+      --namespace "$NAMESPACE" \
+      --create-namespace \
+      --set image.repository="$IMAGE_REPOSITORY" \
+      --set image.tag="$IMAGE_TAG" \
+      --wait
+    ;;
+  *)
+    helm upgrade --install "$RELEASE_NAME" "$CHART" \
+      --namespace "$NAMESPACE" \
+      --create-namespace \
+      --set image.repository="$IMAGE_REPOSITORY" \
+      --set image.tag="$IMAGE_TAG" \
+      --wait
+    ;;
+esac
 
 kubectl rollout status "deployment/$RELEASE_NAME" -n "$NAMESPACE"
 

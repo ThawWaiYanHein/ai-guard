@@ -2,6 +2,7 @@ param(
     [string]$ReleaseName = $env:RELEASE_NAME,
     [string]$Namespace = $env:NAMESPACE,
     [string]$Chart = $env:CHART,
+    [string]$ChartVersion = $env:CHART_VERSION,
     [string]$ImageRepository = $env:IMAGE_REPOSITORY,
     [string]$ImageTag = $env:IMAGE_TAG,
     [string]$CertManagerVersion = $env:CERT_MANAGER_VERSION,
@@ -12,7 +13,8 @@ $ErrorActionPreference = "Stop"
 
 if (-not $ReleaseName) { $ReleaseName = "ai-guard" }
 if (-not $Namespace) { $Namespace = "ai-guard-system" }
-if (-not $Chart) { $Chart = ".\charts\ai-guard" }
+if (-not $Chart) { $Chart = "oci://ghcr.io/thawwaiyanhein/charts/ai-guard" }
+if (-not $ChartVersion) { $ChartVersion = "0.1.0" }
 if (-not $ImageRepository) { $ImageRepository = "ghcr.io/thawwaiyanhein/ai-guard" }
 if (-not $ImageTag) { $ImageTag = "0.1.0" }
 if (-not $CertManagerVersion) { $CertManagerVersion = "v1.20.3" }
@@ -64,12 +66,23 @@ else {
 }
 
 Write-Host "Installing AI-Guard..."
-helm upgrade --install $ReleaseName $Chart `
-    --namespace $Namespace `
-    --create-namespace `
-    --set image.repository=$ImageRepository `
-    --set image.tag=$ImageTag `
-    --wait
+if ($Chart -like "oci://*") {
+    helm upgrade --install $ReleaseName $Chart `
+        --version $ChartVersion `
+        --namespace $Namespace `
+        --create-namespace `
+        --set image.repository=$ImageRepository `
+        --set image.tag=$ImageTag `
+        --wait
+}
+else {
+    helm upgrade --install $ReleaseName $Chart `
+        --namespace $Namespace `
+        --create-namespace `
+        --set image.repository=$ImageRepository `
+        --set image.tag=$ImageTag `
+        --wait
+}
 
 kubectl rollout status "deployment/$ReleaseName" -n $Namespace
 
